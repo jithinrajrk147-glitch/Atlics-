@@ -1,4 +1,4 @@
-// === API KEYS SPLIT INTO 3 PARTS - NEVER EXPOSE FULL KEY =====
+// ===== API KEYS SPLIT INTO 3 PARTS - NEVER EXPOSE FULL KEY =====
 const K1_A = 'gsk_0sY'; const K1_B = '6poD11X5MZ'; const K1_C = '1LjNaBOWGdyb3FYEg8K9XnkBlKn4zq22B6w5XbP';
 const K2_A = 'gsk_wyv'; const K2_B = '9MbaViWxNA'; const K2_C = '5gUM6YTWGdyb3FYqyQv6VHeolKezvXfLu5fu0u4';
 const K3_A = 'gsk_CQo'; const K3_B = 'bSQLsPGuA4'; const K3_C = '2UUzbnDWGdyb3FY0fiWRwjGjLrlSRHkWRnxQCh6';
@@ -13,16 +13,13 @@ const GROQ_MODEL = 'llama-3.1-70b-versatile';
 const MAX_REQUESTS = 10;
 let currentKeyIndex = 0;
 
-// ===== RATE LIMITING =====
 function checkRateLimit() {
   const usage = JSON.parse(localStorage.getItem('sva_usage') || '{"count":0,"date":""}');
   const today = new Date().toDateString();
-
   if (usage.date!== today) {
     localStorage.setItem('sva_usage', JSON.stringify({ count: 0, date: today }));
     return true;
   }
-
   if (usage.count >= MAX_REQUESTS) return false;
   usage.count++;
   localStorage.setItem('sva_usage', JSON.stringify(usage));
@@ -36,14 +33,12 @@ function getRemainingRequests() {
   return MAX_REQUESTS - usage.count;
 }
 
-// ===== IMAGE DETECTION =====
 function isImageRequest(text) {
   const imgKeywords = ['image', 'photo', 'picture', 'draw', 'show me', 'generate', 'create image', 'make image'];
   const ql = text.toLowerCase();
   return imgKeywords.some(k => ql.includes(k));
 }
 
-// ===== CORE UI FUNCTIONS =====
 let isGenerating = false;
 
 window.autoResize = function(el) {
@@ -73,16 +68,13 @@ function addMessage(text, isUser) {
   const chatbox = document.getElementById('chatbox');
   const row = document.createElement('div');
   row.className = 'msg-row ' + (isUser? 'user' : 'bot');
-
   const av = document.createElement('div');
   av.className = 'avatar ' + (isUser? 'user-av' : 'bot-av');
   av.textContent = isUser? '👤' : '𖠌';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble ' + (isUser? 'user-bubble' : 'bot-bubble');
   if (isUser) bubble.textContent = text;
   else bubble.innerHTML = text;
-
   row.appendChild(av);
   row.appendChild(bubble);
   chatbox.appendChild(row);
@@ -95,20 +87,16 @@ function addTypingLoader(isImage) {
   const chatbox = document.getElementById('chatbox');
   const row = document.createElement('div');
   row.className = 'msg-row bot';
-
   const av = document.createElement('div');
   av.className = 'avatar bot-av';
   av.textContent = '✦';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble bot-bubble';
-
   if (isImage) {
     bubble.innerHTML = `<div class="img-gen-box"><div class="spin-ring"></div><span>Generating images…</span></div>`;
   } else {
     bubble.innerHTML = `<div class="typing-loader"><span></span><span></span><span></span></div>`;
   }
-
   row.appendChild(av);
   row.appendChild(bubble);
   chatbox.appendChild(row);
@@ -116,7 +104,6 @@ function addTypingLoader(isImage) {
   return { bubble };
 }
 
-// ===== SAFE FETCH =====
 async function safeFetch(url, options = {}) {
   try {
     const r = await fetch(url, { cache: 'no-store',...options });
@@ -125,19 +112,14 @@ async function safeFetch(url, options = {}) {
   } catch { return null; }
 }
 
-// ===== GROQ WITH FALLBACK - NO WIKIPEDIA FALLBACK FOR TEXT =====
 async function callGroqWithFallback(prompt) {
   for (let i = 0; i < KEYS.length; i++) {
     const key = KEYS[currentKeyIndex];
     currentKeyIndex = (currentKeyIndex + 1) % KEYS.length;
-
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: GROQ_MODEL,
           messages: [{ role: 'user', content: prompt }],
@@ -145,41 +127,32 @@ async function callGroqWithFallback(prompt) {
           max_tokens: 1024
         })
       });
-
       if (!res.ok) {
         if (res.status === 429 || res.status === 401) continue;
         throw new Error('API Error');
       }
-
       const data = await res.json();
       return data.choices[0].message.content;
-    } catch (e) {
-      continue;
-    }
+    } catch (e) { continue; }
   }
   throw new Error('ALL_APIS_DOWN');
 }
 
-// ===== IMAGE SOURCES =====
 async function getWikiImages(query) {
   try {
     const searchURL = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
     const searchData = await safeFetch(searchURL);
     if (!searchData?.query?.search?.length) return null;
-
     const title = searchData.query.search[0].title;
     const imgURL = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=images&imlimit=8&format=json&origin=*`;
     const imgData = await safeFetch(imgURL);
     if (!imgData?.query?.pages) return null;
-
     const page = Object.values(imgData.query.pages)[0];
     const images = page.images || [];
-
     const validImgs = images.filter(i => {
       const n = i.title.toLowerCase();
       return!n.includes('.svg') &&!n.includes('icon') &&!n.includes('logo') &&!n.includes('flag');
     }).slice(0, 4);
-
     const imageURLs = [];
     for (const img of validImgs) {
       const infoURL = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(img.title)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
@@ -190,7 +163,6 @@ async function getWikiImages(query) {
         if (url) imageURLs.push(url);
       }
     }
-
     if (!imageURLs.length) return null;
     const gridHTML = imageURLs.map(u => `<img src="${u}" loading="lazy" onerror="this.remove()" />`).join('');
     return `<b>Wikipedia: ${title}</b><div class="wiki-images">${gridHTML}</div>`;
@@ -211,12 +183,8 @@ function getPollinationsImage(query) {
   return `<b>AI Generated:</b><img src="https://image.pollinations.ai/prompt/${encodeURIComponent(query)}?model=flux&width=512&height=512&seed=${seed}&nologo=true&nocache=${Date.now()}" />`;
 }
 
-// ===== MAIN ROUTER =====
 async function handleQuery(q) {
-  if (!checkRateLimit()) {
-    throw new Error('RATE_LIMIT');
-  }
-
+  if (!checkRateLimit()) throw new Error('RATE_LIMIT');
   if (isImageRequest(q)) {
     const cleanQ = q.replace(/image(s)?|photo(s)?|picture(s)?|draw|show me|generate|create|make/gi, '').trim() || q;
     let result = await getWikiImages(cleanQ);
@@ -225,7 +193,6 @@ async function handleQuery(q) {
     if (result) return result;
     return getPollinationsImage(cleanQ);
   }
-
   try {
     return await callGroqWithFallback(q);
   } catch (e) {
@@ -234,29 +201,22 @@ async function handleQuery(q) {
   }
 }
 
-// ===== MAIN HANDLER =====
 window.handleInteraction = async function() {
   const input = document.getElementById('q');
   const btn = document.getElementById('send-btn');
   const icon = document.getElementById('btnIcon');
-
   if (isGenerating) { location.reload(); return; }
-
   const query = input.value.trim();
   if (!query) return;
-
   addMessage(query, true);
   input.value = '';
   input.style.height = 'auto';
-
   isGenerating = true;
   btn.disabled = false;
   btn.classList.add('stop');
   icon.className = 'fa-solid fa-stop';
-
   const isImg = isImageRequest(query);
   const { bubble } = addTypingLoader(isImg);
-
   try {
     const response = await handleQuery(query);
     bubble.innerHTML = response;
