@@ -1,4 +1,4 @@
-// ===== API KEYS SPLIT INTO 3 PARTS - NEVER EXPOSE FULL KEY =====
+// === API KEYS SPLIT INTO 3 PARTS - NEVER EXPOSE FULL KEY =====
 const K1_A = 'gsk_0sY'; const K1_B = '6poD11X5MZ'; const K1_C = '1LjNaBOWGdyb3FYEg8K9XnkBlKn4zq22B6w5XbP';
 const K2_A = 'gsk_wyv'; const K2_B = '9MbaViWxNA'; const K2_C = '5gUM6YTWGdyb3FYqyQv6VHeolKezvXfLu5fu0u4';
 const K3_A = 'gsk_CQo'; const K3_B = 'bSQLsPGuA4'; const K3_C = '2UUzbnDWGdyb3FY0fiWRwjGjLrlSRHkWRnxQCh6';
