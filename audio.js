@@ -95,7 +95,7 @@ function addTypingLoader(isImage) {
   if (isImage) {
     bubble.innerHTML = `<div class="img-gen-box"><div class="spin-ring"></div><span>Generating images…</span></div>`;
   } else {
-    bubble.innerHTML = `<div class="typing-loader"><span></span><span></span><span></span></div>`;
+    bubble.innerHTML = `<div class="typing-loader"><span></span><span></span></div>`;
   }
   row.appendChild(av);
   row.appendChild(bubble);
