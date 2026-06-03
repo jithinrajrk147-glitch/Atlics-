@@ -1,6 +1,7 @@
 // ===== API KEYS SPLIT INTO 3 PARTS - NEVER EXPOSE FULL KEY =====
-const K1_A = 'gsk_0sY'; const K1_B = '6poD11X5MZ'; const K1_C = '1LjNaBOWGdyb3FYEg8K9XnkBlKn4zq22B6w5XbP'; const K1_A = 'gsk_wyv'; const K1_B = '9MbaViWxNA'; const K1_C = '5gUM6YTWGdyb3FYqyQv6VHeolKezvXfLu5fu0u4';
-const K1_A = 'gsk_CQo'; const K1_B = 'bSQLsPGuA4'; const K1_C = '2UUzbnDWGdyb3FY0fiWRwjGjLrlSRHkWRnxQCh6';
+const K1_A = 'gsk_0sY'; const K1_B = '6poD11X5MZ'; const K1_C = '1LjNaBOWGdyb3FYEg8K9XnkBlKn4zq22B6w5XbP';
+const K2_A = 'gsk_wyv'; const K2_B = '9MbaViWxNA'; const K2_C = '5gUM6YTWGdyb3FYqyQv6VHeolKezvXfLu5fu0u4';
+const K3_A = 'gsk_CQo'; const K3_B = 'bSQLsPGuA4'; const K3_C = '2UUzbnDWGdyb3FY0fiWRwjGjLrlSRHkWRnxQCh6';
 
 const KEYS = [
   K1_A + K1_B + K1_C,
@@ -22,10 +23,7 @@ function checkRateLimit() {
     return true;
   }
 
-  if (usage.count >= MAX_REQUESTS) {
-    return false;
-  }
-
+  if (usage.count >= MAX_REQUESTS) return false;
   usage.count++;
   localStorage.setItem('sva_usage', JSON.stringify(usage));
   return true;
@@ -48,22 +46,22 @@ function isImageRequest(text) {
 // ===== CORE UI FUNCTIONS =====
 let isGenerating = false;
 
-function autoResize(el) {
+window.autoResize = function(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
+};
 
-function checkInput() {
+window.checkInput = function() {
   const v = document.getElementById('q').value.trim();
   const btn = document.getElementById('send-btn');
   if (!isGenerating) btn.disabled = v === '';
-}
+};
 
-function quickSend(text) {
+window.quickSend = function(text) {
   document.getElementById('q').value = text;
-  checkInput();
-  handleInteraction();
-}
+  window.checkInput();
+  window.handleInteraction();
+};
 
 function hideWelcome() {
   const w = document.getElementById('welcome');
@@ -108,14 +106,14 @@ function addTypingLoader(isImage) {
   if (isImage) {
     bubble.innerHTML = `<div class="img-gen-box"><div class="spin-ring"></div><span>Generating images…</span></div>`;
   } else {
-    bubble.innerHTML = `<div class="typing-loader"><span></span><span></span></div>`;
+    bubble.innerHTML = `<div class="typing-loader"><span></span><span></span><span></span></div>`;
   }
 
   row.appendChild(av);
   row.appendChild(bubble);
   chatbox.appendChild(row);
   chatbox.scrollTop = chatbox.scrollHeight;
-  return { row, bubble };
+  return { bubble };
 }
 
 // ===== SAFE FETCH =====
@@ -129,8 +127,6 @@ async function safeFetch(url, options = {}) {
 
 // ===== GROQ WITH FALLBACK - NO WIKIPEDIA FALLBACK FOR TEXT =====
 async function callGroqWithFallback(prompt) {
-  let lastError = null;
-
   for (let i = 0; i < KEYS.length; i++) {
     const key = KEYS[currentKeyIndex];
     currentKeyIndex = (currentKeyIndex + 1) % KEYS.length;
@@ -158,11 +154,9 @@ async function callGroqWithFallback(prompt) {
       const data = await res.json();
       return data.choices[0].message.content;
     } catch (e) {
-      lastError = e;
       continue;
     }
   }
-
   throw new Error('ALL_APIS_DOWN');
 }
 
@@ -223,20 +217,15 @@ async function handleQuery(q) {
     throw new Error('RATE_LIMIT');
   }
 
-  // IMAGE ROUTE - Has multiple fallbacks
   if (isImageRequest(q)) {
     const cleanQ = q.replace(/image(s)?|photo(s)?|picture(s)?|draw|show me|generate|create|make/gi, '').trim() || q;
-
     let result = await getWikiImages(cleanQ);
     if (result) return result;
-
     result = await getOpenverseImages(cleanQ);
     if (result) return result;
-
     return getPollinationsImage(cleanQ);
   }
 
-  // TEXT ROUTE - Groq only, no Wikipedia fallback
   try {
     return await callGroqWithFallback(q);
   } catch (e) {
@@ -246,7 +235,7 @@ async function handleQuery(q) {
 }
 
 // ===== MAIN HANDLER =====
-async function handleInteraction() {
+window.handleInteraction = async function() {
   const input = document.getElementById('q');
   const btn = document.getElementById('send-btn');
   const icon = document.getElementById('btnIcon');
@@ -272,7 +261,6 @@ async function handleInteraction() {
     const response = await handleQuery(query);
     bubble.innerHTML = response;
     saveChat();
-
     const remaining = getRemainingRequests();
     document.querySelector('.hint').textContent = `DEPTHROOT AI · ${remaining} requests remaining today`;
   } catch (e) {
@@ -287,10 +275,10 @@ async function handleInteraction() {
     isGenerating = false;
     btn.classList.remove('stop');
     icon.className = 'fa-solid fa-arrow-up';
-    checkInput();
+    window.checkInput();
     document.getElementById('chatbox').scrollTop = document.getElementById('chatbox').scrollHeight;
   }
-}
+};
 
 function saveChat() {
   const rows = [];
@@ -315,28 +303,27 @@ function loadChat() {
     `;
     chatbox.appendChild(row);
   });
-
   const remaining = getRemainingRequests();
   document.querySelector('.hint').textContent = `DEPTHROOT AI · ${remaining} requests remaining today`;
 }
 
-function clearChat() {
+window.clearChat = function() {
   document.getElementById('chatbox').innerHTML = `
     <div id="welcome">
       <div class="w-icon">✦</div>
       <h2>How can I help?</h2>
       <p>Ask me anything — Wikipedia knowledge, images, crypto prices, jokes, quotes & more.</p>
       <div class="suggestion-grid">
-        <div class="suggest-card" onclick="quickSend('Tell me about black holes')">
+        <div class="suggest-card" onclick="window.quickSend('Tell me about black holes')">
           <div class="s-icon">🔭</div><div class="s-text">Tell me about black holes</div>
         </div>
-        <div class="suggest-card" onclick="quickSend('Bitcoin price today')">
+        <div class="suggest-card" onclick="window.quickSend('Bitcoin price today')">
           <div class="s-icon">₿</div><div class="s-text">Bitcoin price today</div>
         </div>
-        <div class="suggest-card" onclick="quickSend('Wikipedia images of Mount Everest')">
+        <div class="suggest-card" onclick="window.quickSend('Wikipedia images of Mount Everest')">
           <div class="s-icon">🏔️</div><div class="s-text">Images of Mount Everest</div>
         </div>
-        <div class="suggest-card" onclick="quickSend('Tell me a joke')">
+        <div class="suggest-card" onclick="window.quickSend('Tell me a joke')">
           <div class="s-icon">😄</div><div class="s-text">Tell me a joke</div>
         </div>
       </div>
@@ -344,13 +331,12 @@ function clearChat() {
   localStorage.removeItem('sva_chat');
   const remaining = getRemainingRequests();
   document.querySelector('.hint').textContent = `DEPTHROOT AI · ${remaining} requests remaining today`;
-}
+};
 
-// Enter to send
 document.getElementById('q').addEventListener('keydown', e => {
   if (e.key === 'Enter' &&!e.shiftKey) {
     e.preventDefault();
-    handleInteraction();
+    window.handleInteraction();
   }
 });
 
